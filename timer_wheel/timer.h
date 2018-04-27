@@ -9,7 +9,7 @@
 #include <mutex>
 
 class Timer;
-typedef std::function<void()> TimerCallback;
+typedef std::function<void(int32_t)> TimerCallback;
 typedef std::shared_ptr<Timer> TimerPtr;
 typedef std::list<TimerPtr> TimerList;
 typedef TimerList::iterator TimerListItor;
@@ -25,7 +25,7 @@ public:
 		  repeat_(interval > 0)
 	{}
 
-	void run() const { callback_(); }
+	void run() const { callback_(timerid_); }
 
 	int32_t get_timerid() const { return timerid_; }
 	int64_t expiration() const { return expire_; }

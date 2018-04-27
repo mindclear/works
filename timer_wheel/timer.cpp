@@ -105,7 +105,7 @@ void TimerWheel::update()
 			if (0 == cur_index) // one loop finish
 			{
 				int level = 0;
-				uint64_t mask = TIME_NEAR;
+				int64_t mask = TIME_NEAR;
 				do
 				{
 					int32_t wheel_index = OFFSET(level) + INDEX(last_cursor_, level);
