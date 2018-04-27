@@ -64,6 +64,7 @@ public:
 
 private:
 	// unsafe, must be lock befor call
+	// to do
 	int32_t addAndFetchTimerid();
 	// unsafe, must be lock before call
 	void addTimer(TimerPtr timer);
