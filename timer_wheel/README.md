@@ -1,5 +1,5 @@
 ﻿# timer wheel
-此练习基本是skynet时钟系统的c++版本，同时增加了取消定时器这一操作。区别有两点：
+此练习基本是skynet时钟系统的c++11版本，同时增加了取消定时器这一操作。区别有两点：
 
 1.在skynet的版本中，定时器的位置是通过位判断，如：
 >(time|TIME_NEAR_MASK)==(current_time|TIME_NEAR_MASK)
