@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <signal.h>
 
 #define FIFO1 "t_fifo_1"
 #define FIFO2 "t_fifo_2"
@@ -27,12 +28,14 @@ void createPipe(int fd[2])
 void serverPipe(int read_fd, int write_fd)
 {
     printf("init server pipe read = %d, write = %d\n", read_fd, write_fd);
+    // close(read_fd);
+    // sleep(100);
     // fcntl(read_fd, F_SETFL, O_NONBLOCK);
-    int n = 0;
     char buff[256] = {0};
-    if ((n = read(read_fd, buff, 256)) == 0)
+    int n = read(read_fd, buff, 256);
+    if (errno != 0)
     {
-        printf("child read 0\n");
+        printf("child read failed! ret = %d, err = %s\n", errno, strerror(errno));
         return;
     }
     printf("server read %s\n", buff);
@@ -75,9 +78,9 @@ void clientPipe(int read_fd, int write_fd)
 
 void testPipe()
 {
-    // int fd1[2], fd2[2];
-    // createPipe(fd1);
-    // createPipe(fd2);
+    int fd1[2], fd2[2];
+    createPipe(fd1);
+    createPipe(fd2);
     if ((mkfifo(FIFO1, 0600) < 0) && errno != EEXIST)
     {
         printf("can't create %s", FIFO1);
@@ -92,24 +95,24 @@ void testPipe()
     pid_t child_t = 0;
     if ((child_t = fork()) == 0)
     {
-        // close(fd1[1]);
-        // close(fd2[0]);
-        // int read_fd = fd1[0];
-        // int write_fd = fd2[1];
-        int read_fd = open(FIFO1, O_RDONLY, 0);
-        int write_fd = open(FIFO2, O_WRONLY, 0);
+        close(fd1[1]);
+        close(fd2[0]);
+        int read_fd = fd1[0];
+        int write_fd = fd2[1];
+        // int read_fd = open(FIFO1, O_RDONLY, 0);
+        // int write_fd = open(FIFO2, O_WRONLY, 0);
         serverPipe(read_fd, write_fd);
         printf("child proccess llllllllllllllllllllllllllllllllllllexit!\n");
         exit(0);
     }
     printf("child proccess %d\n", child_t);
 
-    // close(fd1[0]);
-    // close(fd2[1]);
-    // int read_fd = fd2[0];
-    // int write_fd = fd1[1];
-    int write_fd = open(FIFO1, O_WRONLY, 0);
-    int read_fd = open(FIFO2, O_RDONLY, 0);
+    close(fd1[0]);
+    close(fd2[1]);
+    int read_fd = fd2[0];
+    int write_fd = fd1[1];
+    // int write_fd = open(FIFO1, O_WRONLY, 0);
+    // int read_fd = open(FIFO2, O_RDONLY, 0);
     clientPipe(read_fd,write_fd);
     waitpid(child_t, NULL, 0);
     unlink(FIFO1);
@@ -119,6 +122,7 @@ void testPipe()
 
 int main()
 {
+    signal(SIGPIPE, SIG_IGN);
     testPipe();
     return 0;
 }
