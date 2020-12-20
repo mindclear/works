@@ -128,14 +128,14 @@ void RBInsertFixup(ListNode** head, ListNode* node)
             node_parent->left->color = true;
             return;
         }
-        
     }
-    node->color = false;
+    if (node == *head)
+        node->color = false;
 }
 
 void RBInsert(ListNode** head, ListNode* node)
 {
-    if (head == NULL || *head == NULL)
+    if (*head == NULL)
     {
         *head = node;
         node->color = false;
@@ -178,25 +178,24 @@ void RBDeleteFixup(ListNode** head, ListNode* node)
                 node = node_parent;
                 continue;
             }
-            else
+
+            if (brother->color) //兄弟结点是红色
             {
-                if (brother->color) //兄弟结点是红色
+                LeftRotate(head, node_parent);
+                brother->color = false;
+                node_parent->color = true;
+            }
+            else //兄弟结点是黑色
+            {
+                ListNode* brother_left = brother->left;
+                ListNode* brother_right = brother->right;
+                if ((brother_left == NULL || !brother->left->color) && (brother_right == NULL || !brother_right->color)) //左右结点都是黑色
                 {
-                    LeftRotate(head, node_parent);
-                    brother->color = false;
-                    node_parent->color = true;
-                    continue;
+                    brother->color = true;
+                    node = node_parent;
                 }
-                else //兄弟结点是黑色
+                else
                 {
-                    ListNode* brother_left = brother->left;
-                    ListNode* brother_right = brother->right;
-                    if ((brother_left == NULL || !brother->left->color) && (brother_right == NULL || !brother_right->color)) //左右结点都是黑色
-                    {
-                        brother->color = true;
-                        node = node_parent;
-                        continue;
-                    }
                     if (brother_right == NULL || !brother_right->color) //左结点是红色，右结点是黑色
                     {
                         RightRotate(head, brother);
@@ -207,14 +206,51 @@ void RBDeleteFixup(ListNode** head, ListNode* node)
                     LeftRotate(head, node_parent);
                     brother->color = node_parent->color;
                     node_parent->color = false;
-                    if (brother_right != NULL) brother_right->color = false;
+                    brother->right->color = false;
                     break;
                 }
             }
         }
         else //当前结点是右结点
         {
-            //TODO
+            ListNode* brother = node_parent->left;
+            if (brother == NULL)
+            {
+                node = node_parent;
+                continue;
+            }
+
+            if (brother->color)
+            {
+                RightRotate(head, node_parent);
+                node_parent->color = true;
+                brother->color = false;
+            }
+            else
+            {
+                ListNode* brother_left = brother->left;
+                ListNode* brother_right = brother->right;
+                if ((brother_left == NULL || !brother_left->color) && (brother_right == NULL || !brother_right->color))
+                {
+                    brother->color = true;
+                    node = node_parent;
+                }
+                else
+                {
+                    if (!brother_left || !brother_left->color) //左边结点是黑色，右边结点是红色
+                    {
+                        LeftRotate(head, brother);
+                        brother->color = true;
+                        brother->right->color = false;
+                        brother = brother->right; //旋转更换了node的兄弟结点
+                    }
+                    RightRotate(head, node_parent);
+                    brother->color = node_parent->color;
+                    node_parent->color = false;
+                    brother->left->color = false;
+                    break;
+                }
+            }
         }
         
     }
@@ -254,8 +290,6 @@ void RBDelete(ListNode** head, ListNode* node)
     {
         if (child != NULL)
             RBDeleteFixup(head, child);
-        else if (cur->parent != NULL)
-            RBDeleteFixup(head, cur->parent);
     }
 }
 
@@ -277,6 +311,11 @@ int main()
     RBInsert(&head, new ListNode(6));
     RBInsert(&head, new ListNode(12));
     RBInsert(&head, new ListNode(14));
-    // RBInsert(&head, new ListNode(13));
+    ListNode* node = new ListNode(16);
+    RBInsert(&head, node);
     Print(head);
+    printf("\n");
+    // RBDelete(&head, head);
+    // Print(head);
+    // printf("\n");
 }
