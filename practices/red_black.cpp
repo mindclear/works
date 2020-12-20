@@ -61,7 +61,25 @@ void RightRotate(ListNode** head, ListNode* cur)
     }
 }
 
-void RBInsertFIxup(ListNode** head, ListNode* node)
+ListNode* TreeSuccessor(ListNode* cur)
+{
+    if (cur == NULL)
+        return NULL;
+
+    if (cur->right != NULL) //包含右子树
+    {
+        ListNode* node = cur->right;
+        while (node->left != NULL)
+            node = node->left;
+        return node;
+    }
+
+    while (cur->parent != NULL && cur->parent->right == cur)
+        cur = cur->parent;
+    return cur->parent;
+}
+
+void RBInsertFixup(ListNode** head, ListNode* node)
 {
     while (node->parent != NULL && node->parent->color) //父结点也是红色
     {
@@ -77,11 +95,11 @@ void RBInsertFIxup(ListNode** head, ListNode* node)
                 node = node_parent->parent;
                 continue;
             }
-            if (node == node_parent->right) //当前结点是左结点
+            if (node == node_parent->right) //当前结点是右结点
             {
                 LeftRotate(head, node_parent);
                 node = node_parent;
-                node_parent = node->parent; //旋转跟换了父子结点的顺序
+                node_parent = node->parent; //旋转更换了父子结点的顺序
             }
             RightRotate(head, node_parent->parent);
             node_parent->color = false;
@@ -99,7 +117,7 @@ void RBInsertFIxup(ListNode** head, ListNode* node)
                 node = node_parent->parent;
                 continue;
             }
-            if (node == node_parent->left)
+            if (node == node_parent->left) //当前结点是左结点
             {
                 RightRotate(head, node_parent);
                 node = node_parent;
@@ -117,7 +135,7 @@ void RBInsertFIxup(ListNode** head, ListNode* node)
 
 void RBInsert(ListNode** head, ListNode* node)
 {
-    if (*head == NULL)
+    if (head == NULL || *head == NULL)
     {
         *head = node;
         node->color = false;
@@ -141,7 +159,104 @@ void RBInsert(ListNode** head, ListNode* node)
     else
         pre->right = node;
     if (pre->color)
-        RBInsertFIxup(head, node);
+        RBInsertFixup(head, node);
+}
+
+void RBDeleteFixup(ListNode** head, ListNode* node)
+{
+    if (NULL == node)
+        return;
+    
+    while (node != *head && !node->color) //当前结点是黑色的
+    {
+        ListNode* node_parent = node->parent;
+        if (node_parent->left == node) //当前结点是左结点
+        {
+            ListNode* brother = node_parent->right;
+            if (brother == NULL) //父结点的右结点为空
+            {
+                node = node_parent;
+                continue;
+            }
+            else
+            {
+                if (brother->color) //兄弟结点是红色
+                {
+                    LeftRotate(head, node_parent);
+                    brother->color = false;
+                    node_parent->color = true;
+                    continue;
+                }
+                else //兄弟结点是黑色
+                {
+                    ListNode* brother_left = brother->left;
+                    ListNode* brother_right = brother->right;
+                    if ((brother_left == NULL || !brother->left->color) && (brother_right == NULL || !brother_right->color)) //左右结点都是黑色
+                    {
+                        brother->color = true;
+                        node = node_parent;
+                        continue;
+                    }
+                    if (brother_right == NULL || !brother_right->color) //左结点是红色，右结点是黑色
+                    {
+                        RightRotate(head, brother);
+                        brother->color = true;
+                        brother_left->color = false;
+                        brother = brother_left; //旋转更换了node的兄弟结点
+                    }
+                    LeftRotate(head, node_parent);
+                    brother->color = node_parent->color;
+                    node_parent->color = false;
+                    if (brother_right != NULL) brother_right->color = false;
+                    break;
+                }
+            }
+        }
+        else //当前结点是右结点
+        {
+            //TODO
+        }
+        
+    }
+    node->color = false;
+}
+
+void RBDelete(ListNode** head, ListNode* node)
+{
+    if (head == NULL || *head == NULL)
+        return;
+
+    ListNode* cur = node;
+    if (cur->left != NULL & cur->right != NULL)
+        cur = TreeSuccessor(cur);
+
+    ListNode* child = (cur->left != NULL) ? cur->left : cur->right; //被删除结点只会有一个子结点
+    if (child != NULL)
+        child->parent = cur->parent;
+    if (cur->parent != NULL)
+    {
+        if (cur == cur->parent->left)
+            cur->parent->left = child;
+        else
+            cur->parent->right = child;
+    }
+    else
+    {
+        *head = child;
+    }
+    if (cur != node)
+    {
+        //简单替换信息
+        node->val = cur->val;
+    }
+
+    if (!cur->color) //被删除结点是黑色的
+    {
+        if (child != NULL)
+            RBDeleteFixup(head, child);
+        else if (cur->parent != NULL)
+            RBDeleteFixup(head, cur->parent);
+    }
 }
 
 void Print(ListNode* head)
