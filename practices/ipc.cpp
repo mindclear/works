@@ -83,8 +83,8 @@ void clientPipe(int read_fd, int write_fd)
     printf("client write success!\n");
 
     n = 0;
-    // while ((n = read(read_fd, buff, 256)) > 0)
-        // write(STDOUT_FILENO, buff, n);
+    while ((n = read(read_fd, buff, 256)) > 0)
+        write(STDOUT_FILENO, buff, n);
 
     printf("clientPipe return\n");
 }
