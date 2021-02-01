@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <signal.h>
+#include <pthread.h>
 
 #define FIFO1 "t_fifo_1"
 #define FIFO2 "t_fifo_2"
@@ -28,12 +29,15 @@ void createPipe(int fd[2])
 void serverPipe(int read_fd, int write_fd)
 {
     printf("init server pipe read = %d, write = %d\n", read_fd, write_fd);
+    // sleep(10);
     // close(read_fd);
-    // sleep(100);
+    // close(write_fd);
+    // printf("serverPipe close %d\n", write_fd);
+    // sleep(10);
     // fcntl(read_fd, F_SETFL, O_NONBLOCK);
     char buff[256] = {0};
     int n = read(read_fd, buff, 256);
-    if (errno != 0)
+    if (n < 0)
     {
         printf("child read failed! ret = %d, err = %s\n", errno, strerror(errno));
         return;
@@ -49,7 +53,14 @@ void serverPipe(int read_fd, int write_fd)
     }
 
     while ((n = read(fd, buff, 256)) > 0)
-        write(write_fd, buff, n);
+    {
+        n = write(write_fd, buff, n);
+        if (n < 0)
+        {
+            printf("child write failed! ret = %d, err = %s\n", errno, strerror(errno));
+            break;
+        }
+    }
     close(fd);
     printf("close\n");
 }
@@ -63,17 +74,19 @@ void clientPipe(int read_fd, int write_fd)
     if (buff[len-1] == '\n')
         len--;
     printf("client input %s", buff);
-    write(write_fd, buff, len);
-    if (errno != 0)
+    int n = write(write_fd, buff, len);
+    if (n < 0)
     {
         printf("client write failed! ret = %d, err = %s\n", errno, strerror(errno));
         return;
     }
+    printf("client write success!\n");
 
-    int n = 0;
-    while ((n = read(read_fd, buff, 256)) > 0)
-        write(STDOUT_FILENO, buff, n);
-    // sleep(10);
+    n = 0;
+    // while ((n = read(read_fd, buff, 256)) > 0)
+        // write(STDOUT_FILENO, buff, n);
+
+    printf("clientPipe return\n");
 }
 
 void testPipe()
@@ -120,9 +133,94 @@ void testPipe()
     printf("main process exit!\n");
 }
 
+class RWLock
+{
+public:
+    RWLock()
+        :wait_readers(0), wait_writters(0), ref_count(0)
+    {
+        pthread_mutex_init(&mutex_, NULL);
+        pthread_cond_init(&read_cond, NULL);
+        pthread_cond_init(&write_cond, NULL);
+    }
+
+    ~RWLock()
+    {
+        pthread_cond_destroy(&read_cond);
+        pthread_cond_destroy(&write_cond);
+        pthread_mutex_destroy(&mutex_);
+    }
+
+    void RLock()
+    {
+        pthread_mutex_lock(&mutex_);
+        while (ref_count < 0 || wait_writters > 0)
+        {
+            wait_readers++;
+            pthread_cond_wait(&read_cond, &mutex_);
+            wait_readers--;
+        }
+        ref_count++;
+        pthread_mutex_unlock(&mutex_);
+    }
+
+    void UnRLock()
+    {
+        pthread_mutex_lock(&mutex_);
+        ref_count--;
+        if (0 == ref_count)
+            pthread_cond_signal(&write_cond);
+        pthread_mutex_unlock(&mutex_);
+    }
+
+    void Lock()
+    {
+        pthread_mutex_lock(&mutex_);
+        while (ref_count != 0)
+        {
+            wait_writters++;
+            pthread_cond_wait(&write_cond, &mutex_);
+            wait_writters--;
+        }
+        ref_count = -1;
+        pthread_mutex_unlock(&mutex_);
+    }
+
+    void UnLock()
+    {
+        pthread_mutex_lock(&mutex_);
+        if (ref_count > 0)
+            ref_count--;
+        else if (ref_count < 0)
+            ref_count = 0;
+
+        if (0 == ref_count)
+        {
+            if (wait_writters > 0)
+                pthread_cond_signal(&write_cond);
+            else if (wait_readers > 0)
+                pthread_cond_broadcast(&read_cond);
+        }
+        pthread_mutex_unlock(&mutex_);
+    }
+private:
+    pthread_mutex_t mutex_;
+    pthread_cond_t read_cond;
+    pthread_cond_t write_cond;
+    int wait_readers;
+    int wait_writters;
+    int ref_count;
+};
+
+void testRWLock()
+{
+    //TODO
+}
+
 int main()
 {
     signal(SIGPIPE, SIG_IGN);
     testPipe();
+    // testRWLock();
     return 0;
 }
