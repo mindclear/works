@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/mman.h>
+#include <semaphore.h>
 
 #define FIFO1 "t_fifo_1"
 #define FIFO2 "t_fifo_2"
@@ -217,10 +219,56 @@ void testRWLock()
     //TODO
 }
 
+struct shared
+{
+    sem_t mutex;
+    int count;
+
+    shared() : count(0)
+    {}
+};
+
+void testShareMemeory()
+{
+    int fd = open("mp.txt", O_RDWR | O_CREAT, S_IRWXU | S_IRWXG | S_IRWXO);
+    if (-1 == fd)
+    {
+        printf("open file failed! %s\n", strerror(errno));
+        return;
+    }
+
+    // shared sh;
+    // write(fd, &sh, sizeof(shared));
+    shared* ptr = (shared*)mmap(NULL, sizeof(shared), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+
+    sem_init(&ptr->mutex, 1, 1);
+
+    if (fork() == 0)
+    {
+        for (int i = 0; i < 100; ++i)
+        {
+            sem_wait(&ptr->mutex);
+            printf("child: %d\n", ptr->count++);
+            sem_post(&ptr->mutex);
+        }
+        exit(0);
+    }
+
+    for (int i = 0; i < 100; ++i)
+    {
+        sem_wait(&ptr->mutex);
+        printf("parent: %d\n", ptr->count++);
+        sem_post(&ptr->mutex);
+    }
+    exit(0);
+}
+
 int main()
 {
     signal(SIGPIPE, SIG_IGN);
-    testPipe();
+    // testPipe();
     // testRWLock();
+    testShareMemeory();
     return 0;
 }
