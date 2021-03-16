@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <semaphore.h>
+#include <string>
 
 #define FIFO1 "t_fifo_1"
 #define FIFO2 "t_fifo_2"
@@ -264,11 +265,84 @@ void testShareMemeory()
     exit(0);
 }
 
+class Sem
+{
+public:
+    Sem(const std::string _n)
+        :name(_n)
+    {
+        sem_fd[0] = sem_fd[1] = -1;
+    }
+
+    void init()
+    {
+        int ret = mkfifo(name.c_str(), 0600);
+        if (ret < 0)
+        {
+            printf("mkfifo failed! name:%s err:%s\n", name.c_str(), strerror(errno));
+            return;
+        }
+
+        sem_fd[0] = open(name.c_str(), O_RDONLY | O_NONBLOCK, 0);
+        sem_fd[1] = open(name.c_str(), O_WRONLY | O_NONBLOCK, 0);
+
+        int flag = fcntl(sem_fd[0], F_GETFL, 0);
+        flag &= ~O_NONBLOCK;
+        fcntl(sem_fd[0], F_SETFL, flag);
+
+        flag = fcntl(sem_fd[1], F_GETFL, 0);
+        flag &= ~O_NONBLOCK;
+        fcntl(sem_fd[1], F_SETFL, flag);
+    }
+
+    void wait()
+    {
+        char c;
+        int ret = read(sem_fd[0], &c, 1);
+        if (ret < 0)
+        {
+            printf("read failed! err:%s\n", strerror(errno));
+            return;
+        }
+    }
+
+    void post()
+    {
+        char c = 1;
+        int ret = write(sem_fd[1], &c, 1);
+        if (ret < 0)
+        {
+            printf("write failed! err:%s\n", strerror(errno));
+            return;
+        }
+    }
+
+private:
+    int sem_fd[2];
+    std::string name;
+};
+
+void testSem()
+{
+    Sem sem("t_sem_fifo");
+    sem.init();
+    if (0 == fork())
+    {
+        sem.wait();
+        printf("child wait\n");
+        exit(0);
+    }
+    sleep(10);
+    sem.post();
+    printf("parent post\n");
+}
+
 int main()
 {
     signal(SIGPIPE, SIG_IGN);
     // testPipe();
     // testRWLock();
-    testShareMemeory();
+    // testShareMemeory();
+    testSem();
     return 0;
 }
