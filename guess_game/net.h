@@ -26,8 +26,8 @@ public:
     int events() const { return events_; }
 
     void enableReading() { events_ |= NET_READABLE; }
-    void enableWriting() { events_ |= kWriteEvent; }
-    void disableWriting() { events_ &= ~kWriteEvent; }
+    void enableWriting() { events_ |= NET_WRITABLE; }
+    void disableWriting() { events_ &= ~NET_WRITABLE; }
 private:
     int events_;
     int revents_;

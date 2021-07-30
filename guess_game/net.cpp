@@ -29,7 +29,7 @@ EventLoop::EventLoop()
     :quit_(false)
 {
     //LOG
-    poller_ = new EPoller();
+    poller_ = new EPoller(10000);
     active_events_ = new NetEvent*[1024];
 }
 
