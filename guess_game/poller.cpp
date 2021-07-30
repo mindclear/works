@@ -1,4 +1,4 @@
-#include "net_poller.h"
+#include "poller.h"
 #include "net.h"
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,12 +7,12 @@
 Poller::Poller(int max_events)
     :max_events_(max_events)
 {
-    events_ = new NetEvent*[max_events_];
+    register_events_ = new NetEvent*[max_events_];
 }
 
 Poller::~Poller()
 {
-    delete[] events_;
+    delete[] register_events_;
 }
 
 EPoller::EPoller(int max_events)
@@ -33,13 +33,36 @@ EPoller::~EPoller()
     delete[] epoll_events_;
 }
 
-void EPoller::addNetEvent(NetEvent* event)
+bool EPoller::addNetEvent(NetEvent* event)
 {
+    assert(event != NULL);
+    int fd = event->fd();
+    if (fd >= max_events_)
+        return false;
+
+    int events = register_events_[fd]->events();
+    int op = (events == NET_NONE) ? EPOLL_CTL_ADD : EPOLL_CTL_MOD;
+
+    //添加修改事件
+    struct epoll_event ee = {0};
+    ee.events = events;
+    ee.data.ptr = event;
+    if (epoll_ctl(epollfd_, op, fd, &ee) == -1)
+        return false;
+    return true;
 }
 
-void EPoller::delNetEvent(NetEvent* event)
+bool EPoller::delNetEvent(NetEvent* event)
 {
-    //TODO
+    assert(event != NULL);
+    int fd = event->fd();
+    if (fd >= max_events_)
+        return false;
+
+    struct epoll_event ee = {0};
+    if (epoll_ctl(epollfd_, EPOLL_CTL_DEL, fd, &ee) == -1)
+        return false;
+    return true;
 }
 
 void EPoller::update(int operation, NetEvent* event)

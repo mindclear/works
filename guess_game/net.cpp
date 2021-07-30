@@ -1,5 +1,5 @@
 #include "net.h"
-#include "net_poller.h"
+#include "poller.h"
 #include <iostream>
 
 NetEvent::NetEvent(int fd)
@@ -29,7 +29,7 @@ EventLoop::EventLoop()
     :quit_(false)
 {
     //LOG
-    poller_ = new EPoller(10000);
+    poller_ = new EPoller(10000); //最大连接数
     active_events_ = new NetEvent*[1024];
 }
 
@@ -46,5 +46,6 @@ void EventLoop::loop()
         int num = poller_->poll(active_events_, 1024, 1);
         for (int i = 0; i < num; ++i)
             active_events_[i]->handleEvent();
+        //LOG
     }
 }

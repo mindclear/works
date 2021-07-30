@@ -24,10 +24,11 @@ public:
     void setRevents(int revt) { revents_ = revt; }
     int fd() const { return fd_; }
     int events() const { return events_; }
-
     void enableReading() { events_ |= NET_READABLE; }
+    void disableReading() { events_ &= ~NET_READABLE; }
     void enableWriting() { events_ |= NET_WRITABLE; }
     void disableWriting() { events_ &= ~NET_WRITABLE; }
+    void disableAll() { events_ = NET_NONE; }
 private:
     int events_;
     int revents_;
