@@ -115,22 +115,6 @@ int MysqlProxy::selectQuery(const char* query_sql)
 		return MYSQL_UNKNOW_ERR;
     }
 
-    //TODO
-    // //取字段的个数
-    // m_iFields = mysql_num_fields(m_result_);
-	
-    // m_mapFieldNameIndex.clear();
-
-    // //取各个字段的属性信息
-    MYSQL_FIELD *fields;
-    // fields = mysql_fetch_fields(m_result_);
-
-    // //把字段名字和索引保存到一个map中
-    // for (int i = 0; i < m_iFields; i++) 
-	// {
-	// 	m_mapFieldNameIndex[fields[i].name] = i;
-    // }
-
     //LOG
 	return MYSQL_SUCC;
 }
@@ -164,6 +148,12 @@ int MysqlProxy::updateQuery(const char* update_sql)
 			//LOG
             return MYSQL_QUE_ERR;
 		}
+
+		do 
+		{
+			m_result_ = mysql_store_result(&m_mysql_);
+			free_result(); 
+		} while (!mysql_next_result(&m_mysql_));
     } 
 	catch (...) 
 	{

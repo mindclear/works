@@ -512,7 +512,7 @@ void GuessServer::recordGame(const Table* table)
 Player* GuessServer::getPlayerFromDB(const char* name)
 {
     //FIXME:escape
-    char sql[64] = {0};
+    char sql[128] = {0};
     sprintf(sql, "select name, score from user_basic where name='%s'", name);
     std::cout << sql << std::endl;
 
@@ -541,14 +541,15 @@ Player* GuessServer::getPlayerFromDB(const char* name)
 bool GuessServer::updatePlayerToDB(const Player* player)
 {
     //FIXME:escape
-    char sql[64] = {0};
-    sprintf(sql, "select name, score from user_basic where name='%s'", player->name);
+    char sql[128] = {0};
+    sprintf(sql, "REPLACE INTO user_basic (name, score) VALUES ('%s',%d)", player->name, player->score);
     std::cout << sql << std::endl;
 
     int ret = MysqlProxy::GetInstance()->updateQuery(sql);
     if (ret != MYSQL_SUCC)
     {
         //LOG
+        std::cout << "updateQuery failed! " << sql << std::endl;
         return false;
     }
     return true;

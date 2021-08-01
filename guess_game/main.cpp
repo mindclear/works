@@ -20,11 +20,12 @@ int main()
     int db_port = cfg.getInt("db_port");
     MysqlProxy::GetInstance()->setAddress(db_host, db_user, db_password, db_name, db_port);
     int ret = MysqlProxy::GetInstance()->connect();
-    // if (MYSQL_SUCC != ret)
-    // {
-    //     //LOG
-    //     return -1;
-    // }
+    if (MYSQL_SUCC != ret)
+    {
+        //LOG
+        std::cout << "connect mysql failed!" << std::endl;
+        return -1;
+    }
 
     int win_score = cfg.getInt("win_score");
     int lose_score = cfg.getInt("lose_score");
