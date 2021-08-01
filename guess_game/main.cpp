@@ -27,10 +27,12 @@ int main()
         return -1;
     }
 
+    //计分配置
     int win_score = cfg.getInt("win_score");
     int lose_score = cfg.getInt("lose_score");
     int tie_score = cfg.getInt("tie_score");
 
+    //启动游戏
     EventLoop loop;
     GuessServer guess_server(&loop, 8999);
     guess_server.setScoreCfg(win_score, lose_score, tie_score);

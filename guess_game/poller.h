@@ -11,8 +11,11 @@ public:
     Poller();
     virtual ~Poller();
 public:
+    //修改事件
     virtual bool updateNetEvent(NetEvent* event) = 0;
+    //删除事件
     virtual bool delNetEvent(NetEvent* event) = 0;
+    //等待事件
     virtual int poll(NetEvent** active_events, int ac_num, int timeout_ms) = 0;
 protected:
     NetEvent** register_events_; //所有注册事件，FIXME：use map

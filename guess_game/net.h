@@ -25,6 +25,7 @@ typedef std::function<void (TcpConnection*)> ConnectionCallback;
 typedef std::function<void (TcpConnection*, Buffer*)> MessageCallback;
 typedef std::function<void (TcpConnection*)> CloseCallback;
 
+//事件
 class NetEvent
 {
 public:
@@ -44,16 +45,16 @@ public:
     void disableAll() { events_ = NET_NONE; }
     bool isWriting() { return events_ & NET_WRITABLE; }
 private:
-    int events_;
-    int revents_;
-    const int fd_;
-    EventCallback readCallback_;
-    EventCallback writeCallback_;
+    int events_;    //关注事件
+    int revents_;   //就绪事件
+    const int fd_;  //文件描述符
+    EventCallback readCallback_;    //读回调函数
+    EventCallback writeCallback_;   //写回调函数
 };
 
 struct FunctorNode
 {
-    Functor functor;
+    Functor functor;    //函数体
     FunctorNode* next;
 
     FunctorNode()
@@ -61,7 +62,7 @@ struct FunctorNode
     {}
 };
 
-//FIXME:使用share_ptr保证TcpConnection的生命周期
+//事件循环
 class EventLoop
 {
 public:
@@ -78,10 +79,13 @@ private:
     Poller* poller_;
     NetEvent** active_events_; //激活事件，FIXME：use vector
     //解决tcp connection生命周期
+    //FIXME:use vector
     FunctorNode* head_functor_;
     FunctorNode* tail_functor_;
 };
 
+//连接对象
+//FIXME:使用share_ptr保证TcpConnection的生命周期
 class TcpConnection
 {
 public:
@@ -101,15 +105,16 @@ private:
     EventLoop* loop_;
     int fd_;
     bool connect_;
-    NetEvent* event_;
-    Buffer input_buffer_;
-    Buffer output_buffer_;
-    MessageCallback messageCallback_;
-    ConnectionCallback connectionCallback_;
-    CloseCallback closeCallback_;
-    void* context_;
+    NetEvent* event_;       //事件
+    Buffer input_buffer_;   //读缓冲区
+    Buffer output_buffer_;  //写缓冲区
+    MessageCallback messageCallback_;       //消息回调
+    ConnectionCallback connectionCallback_; //连接回调
+    CloseCallback closeCallback_; //关闭回调
+    void* context_; //保存应用数据
 };
 
+//监听SERVER
 class TcpServer
 {
 public:
@@ -125,11 +130,11 @@ private:
     void removeConnection(TcpConnection* conn);
 private:
     int listen_fd_;
-    uint16_t listen_port_;
-    EventLoop* loop_;
+    uint16_t listen_port_;  //监听端口
+    EventLoop* loop_;       //循环loop
     NetEvent* listen_event_;
-    MessageCallback messageCallback_;
-    ConnectionCallback connectionCallback_;
+    MessageCallback messageCallback_;       //消息回调
+    ConnectionCallback connectionCallback_; //连接回调
 };
 
 #endif //__NET_H__

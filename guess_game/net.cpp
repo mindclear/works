@@ -23,6 +23,7 @@ void NetEvent::handleEvent()
 {
     //FIXME:
     //LOG
+    //就绪事件回调函数执行
     if (revents_ & NET_READABLE)
     {
         if (readCallback_) readCallback_();
@@ -44,6 +45,7 @@ EventLoop::EventLoop()
 EventLoop::~EventLoop()
 {
     //LOG
+    //FIXME:统一delete/free
     delete poller_;
     free(active_events_);
 }
@@ -103,6 +105,7 @@ TcpConnection::TcpConnection(EventLoop* loop, int fd)
     :loop_(loop), fd_(fd), context_(NULL), connect_(true)
 {
     //LOG
+    //设置回调
     event_ = new NetEvent(fd);
     event_->setReadCallback(std::bind(&TcpConnection::handleRead, this)); //FIXME:
     event_->enableReading();
@@ -144,6 +147,7 @@ void TcpConnection::send(const void* data, int nlen)
 
 void TcpConnection::handleRead()
 {
+    //读取数据
     int nread = input_buffer_.readFd(fd_);
     if (nread > 0)
     {
@@ -162,6 +166,7 @@ void TcpConnection::handleRead()
 
 void TcpConnection::handleClose()
 {
+    //取消所关注事件
     connect_ = false;
     event_->disableAll();
     loop_->updateNetEvent(event_);
@@ -184,6 +189,7 @@ TcpServer::~TcpServer()
 bool TcpServer::start()
 {
     //LOG
+    //创建监听socket
     listen_fd_ = createTcpSocket(listen_port_);
     if (listen_fd_ < 0 )
     {
@@ -232,6 +238,7 @@ int TcpServer::createTcpSocket(uint16_t port)
 
 void TcpServer::handleAccept()
 {
+    //接受连接
     struct sockaddr_in sa;
     socklen_t salen = sizeof(sa);
     memset(&sa, 0, salen);

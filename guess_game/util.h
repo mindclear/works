@@ -18,10 +18,10 @@ struct ListNode
 {
     void* key;
     void* val;
-    unsigned int hash;
-    ListNode* pre;
-    ListNode* next;
-    ListNode* hnext;
+    unsigned int hash;  //hash指
+    ListNode* pre;      //前驱结点
+    ListNode* next;     //后继结点
+    ListNode* hnext;    //hash冲突结点
 
     ListNode()
         :key(NULL), val(NULL), hash(0), pre(NULL), next(NULL), hnext(NULL)

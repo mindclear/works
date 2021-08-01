@@ -17,7 +17,15 @@ Configure::~Configure()
 	{
 		_ifs.close();
 	}
-    //FIXME:items_分配内存
+    //FIXME:释放内存
+	ListNode* cur = items_->Head();
+    while (cur)
+    {
+        ListNode* next = cur->next;
+		delete (char*)cur->key;
+        delete (char*)cur->val;
+        cur = next;
+    }
     delete items_;
 }
 

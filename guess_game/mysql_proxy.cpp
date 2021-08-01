@@ -149,6 +149,7 @@ int MysqlProxy::updateQuery(const char* update_sql)
             return MYSQL_QUE_ERR;
 		}
 
+		//释放本次结果集
 		do 
 		{
 			m_result_ = mysql_store_result(&m_mysql_);
