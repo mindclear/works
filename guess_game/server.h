@@ -92,29 +92,40 @@ public:
     GuessServer(EventLoop* loop, uint16_t port);
     ~GuessServer();
     void startGame();
+    //设置结算配置
     void setScoreCfg(int win_score, int lose_score, int tie_score);
 
 private:
+    //消息解析
     void onConnection(TcpConnection* conn);
     void onMessage(TcpConnection* conn, Buffer* buf);
     void processRequest(TcpConnection* conn, char* pdata);
     bool decodeRequest(char* pdata, int& argc, char** argv);
 
 private:
+    //玩家指令处理
     bool checkValidName(const char* name);
+    //登录
     bool handleLogin(TcpConnection* conn, int argc, char** argv);
+    //展示在线列表
     bool handleShowList(TcpConnection* conn);
+    //加入对局
     bool handleJoinGame(Player* player, int argc, char** argv);
+    //游戏中
     bool handleGame(Player* player, int argc, char** argv);
+    //退出游戏
     bool handleQuitGame(Player* player);
 
 private:
+    //查询玩家
     Player* getPlayer(const char* name);
+    //获取空闲牌桌
     Table* getIdleTable();
     void recycleTable(Table* player);
     void recordGame(const Table* table);
 
 private:
+    //查询或更新数据库
     Player* getPlayerFromDB(const char* name);
     bool updatePlayerToDB(const Player* player);
  
@@ -132,9 +143,9 @@ private:
     HashTable* players_;
 
     //桌子管理相关
-    int table_index_;
+    int table_index_;   //自增桌子索引
     HashTable* tables_;
-    Table* free_tables_;
+    Table* free_tables_; //空闲桌子列表，重复使用
 
     //输出文件
     FILE* out_file_;

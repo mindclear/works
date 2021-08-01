@@ -10,6 +10,8 @@ static const int SERVER_BUCKET = 1024;
 static const int BUCKET_MASK = 0x3ff;
 static const char kCRLF[] = "\r\n";
 
+char info[] = " 1.查看在线列表\r\n 2.创建战局\r\n 3.加入战局(3:昵称)\r\n 4:退出游戏\r\n";
+
 //r:石头-0 s:剪刀-1 p:布-2
 //0-平局 1-赢 -输
 int game_rule[3][3] = 
@@ -37,8 +39,11 @@ GuessServer::GuessServer(EventLoop* loop, uint16_t port)
     :loop_(loop), server_(loop, port), table_index_(0), free_tables_(NULL), out_file_(NULL),
     win_score_(0), lose_score_(0), tie_score_(0)
 {
+    //初始数据结构
     players_ = createHashTable(SERVER_BUCKET, nameHashCode, nameKeyCompare);
     tables_ = createHashTable(SERVER_BUCKET, NULL, NULL);
+
+    //设置回调函数
     server_.setMessageCallback(std::bind(&GuessServer::onMessage, this, _1, _2));
     server_.setConnectionCallback(std::bind(&GuessServer::onConnection, this, _1));
 
@@ -49,8 +54,26 @@ GuessServer::GuessServer(EventLoop* loop, uint16_t port)
 
 GuessServer::~GuessServer()
 {
+    //FIXME:内存释放
+    ListNode* cur = players_->Head();
+    while (cur)
+    {
+        ListNode* next = cur->next;
+        delete (Player*)cur->val;
+        cur = next;
+    }
     delete players_;
+
+    cur = tables_->Head();
+    while (cur)
+    {
+        ListNode* next = cur->next;
+        delete (Table*)cur->val;
+        cur = next;
+    }
     delete tables_;
+    
+    //关闭文件
     fclose(out_file_);
 }
 
@@ -73,6 +96,9 @@ void GuessServer::onConnection(TcpConnection* conn)
     if (conn->connected()) //新连接
     {
         //LOG
+        char buf[128] = {0};
+        int num = sprintf(buf, "请输入昵称\r\n");
+        conn->send(buf, num);
     }
     else
     {
@@ -89,7 +115,7 @@ void GuessServer::onConnection(TcpConnection* conn)
 
 void GuessServer::onMessage(TcpConnection* conn, Buffer* buf)
 {
-    //协议格式，$开头后接数字表示操作类型，以\r\n结尾，例如加入战局 "3:user1\r\n"
+    //协议格式，数字表示操作类型，以\r\n结尾，例如加入战局 "3:user1\r\n"
     while (true)
     {
         int nread = buf->readableBytes();
@@ -127,7 +153,7 @@ bool GuessServer::decodeRequest(char* pdata, int& argc, char** argv)
 
 bool GuessServer::checkValidName(const char* name)
 {
-    //检查昵称有效性
+    //检查昵称有效性，昵称是字母和数字组合，不能以数字开头
     int nlen = strlen(name);
     if (nlen <= 0 || nlen > 16)
         return false;
@@ -170,6 +196,7 @@ bool GuessServer::handleLogin(TcpConnection* conn, int argc, char** argv)
     Player* cur = getPlayer(argv[0]);
     if (cur == NULL)
     {
+        //新增玩家
         int nlen = strlen(argv[0]);
         cur = new Player();
         memcpy(cur->name, argv[0], nlen);
@@ -189,8 +216,9 @@ bool GuessServer::handleLogin(TcpConnection* conn, int argc, char** argv)
     //保存玩家指针在conn
     conn->setContext(cur);
 
-    char buf[64] = {0};
-    int num = sprintf(buf, "%s\t%d\t%d\n", cur->name, cur->score, cur->status);
+    char buf[128] = {0};
+    int num = sprintf(buf, "%s\t%d\t%d\r\n", cur->name, cur->score, cur->status);
+    num += sprintf(buf, "%s", info);
     conn->send(buf, num);
     return true;
 }
@@ -200,13 +228,15 @@ bool GuessServer::handleShowList(TcpConnection* conn)
     //FIXME:协议支持分页
     int total = 0;
     char buf[4096] = {0};
+    total += sprintf(buf, "昵称\t总分\t状态（0-空闲 1-等待加入 2-游戏中）\r\n");
+
     int player_cnt = 0;
     ListNode* cur = players_->Head();
-    while (cur != NULL)
+    while (cur != NULL) //遍历玩家列表
     {
         player_cnt++;
         Player* p = (Player*)cur->val;
-        total += sprintf(buf + total, "%s\t%d\t%d\n", p->name, p->score, p->status);
+        total += sprintf(buf + total, "%s\t%d\t%d\r\n", p->name, p->score, p->status);
         cur = cur->next;
         if (player_cnt >= 100)
         {
@@ -241,7 +271,10 @@ bool GuessServer::handleJoinGame(Player* player, int argc, char** argv)
     if (join_player == NULL || join_player->status != USER_STATUS_WAIT)
     {
         //LOG
-        std::cout << "can't join game! join_user: " << argv[1] << std::endl; 
+        char buf[64] = {0};
+        int num = sprintf(buf, "can't join game! join_user:%s", argv[1]);
+        std::cout << buf << std::endl;
+        player->conn->send(buf, num);
         return false;
     }
 
@@ -258,7 +291,13 @@ bool GuessServer::handleJoinGame(Player* player, int argc, char** argv)
 
     //设置玩家状态
     join_player->setTableInfo(table->table_id, 0, USER_STATUS_GAMEING);
-    player->setTableInfo(table->table_id, 1, USER_STATUS_GAMEING);       
+    player->setTableInfo(table->table_id, 1, USER_STATUS_GAMEING);
+
+    //rsp to client
+    char buf[64] = {0};
+    int num = sprintf(buf, "请出石头(r),剪刀(s),布(p)\r\n");
+    for (int i = 0; i < 2; ++i)
+        table->players[i]->conn->send(buf, num);
     return true;
 }
 
@@ -322,23 +361,30 @@ bool GuessServer::handleGame(Player* player, int argc, char** argv)
         switch (game_ret)
         {
         case 0:
-            table->players[0]->score += tie_score_;
-            table->players[1]->score += tie_score_;
+            table->score_change[0] = tie_score_;
+            table->score_change[1] = tie_score_;
             break;
         case 1:
-            table->players[0]->score += win_score_;
-            table->players[1]->score += lose_score_;
+            table->score_change[0] = win_score_;
+            table->score_change[1] = lose_score_;
             break;
         case -1:
-            table->players[0]->score += lose_score_;
-            table->players[1]->score += win_score_;
+            table->score_change[0] = lose_score_;
+            table->score_change[1] = win_score_;
             break;
         default:
             break;
         }
-        //保存mysql
         for (int i = 0; i < 2; ++i)
+        {
+            //更新积分
+            table->players[i]->score += table->score_change[i];
             updatePlayerToDB(table->players[i]);
+
+            char buf[64] = {0};
+            int num = sprintf(buf, "finish round! change:%d, total:%d\n", table->score_change[i], table->players[i]->score);
+            table->players[i]->conn->send(buf, num);
+        }
         table->end_time = time(NULL);
         //记录牌局
         recordGame(table);

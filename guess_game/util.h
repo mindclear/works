@@ -42,6 +42,20 @@ struct HashTable
         :head(NULL), buckets(NULL), size(0), sizemask(0), used(0), hashFunc(defaultHashFunction), keyCompare(defaultKeyCompare)
     {}
 
+    ~HashTable()
+    {
+        ListNode* cur = head;
+        while (cur)
+        {
+            ListNode* next = cur->next;
+            delete cur;
+            cur = next;
+        }
+        //FIXME:统一new\free
+        delete head;
+        free(buckets);
+    }
+
     ListNode* Head()
     {
         return head->next;

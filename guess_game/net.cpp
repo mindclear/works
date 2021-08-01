@@ -3,6 +3,7 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
@@ -258,6 +259,11 @@ void TcpServer::handleAccept()
 void TcpServer::newConnection(int connfd, const char* peer_ip, const uint16_t peer_port)
 {
     //LOG
+    //FIXME:提供接口设置
+    int optval = 1;
+    setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, &optval, static_cast<socklen_t>(sizeof optval));
+
+    //新建连接
     TcpConnection* conn = new TcpConnection(loop_, connfd);
     conn->setMessageCallback(messageCallback_);
     conn->setConnectionCallback(connectionCallback_);
