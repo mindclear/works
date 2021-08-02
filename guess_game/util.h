@@ -52,7 +52,6 @@ struct HashTable
             cur = next;
         }
         //FIXME:统一new\free
-        delete head;
         free(buckets);
     }
 

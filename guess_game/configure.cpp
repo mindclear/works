@@ -59,7 +59,7 @@ char* Configure::getString(const char* key)
 		return NULL;
 	}
 
-    //FIMXE:拷贝
+    //FIMXE:拷贝，否则存在内存问题
     return get_val;
 }
 
