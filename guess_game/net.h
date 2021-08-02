@@ -92,14 +92,16 @@ public:
     TcpConnection(EventLoop* loop, int fd);
     ~TcpConnection();
     void send(const void* data, int nlen);
-    void handleRead();
-    void handleClose();
     void setMessageCallback(const MessageCallback& cb) { messageCallback_ = cb; }
     void setConnectionCallback(const ConnectionCallback& cb) { connectionCallback_ = cb; }
     void setCloseCallback(const CloseCallback& cb) { closeCallback_ = cb; }
     void setContext(void* context) { context_ = context; }
     void* getContext() const { return context_; }
     bool connected() const { return connect_; }
+private:
+    void handleRead();
+    void handleClose();
+    void handleWrite();
     
 private:
     EventLoop* loop_;

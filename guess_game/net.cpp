@@ -108,6 +108,7 @@ TcpConnection::TcpConnection(EventLoop* loop, int fd)
     //设置回调
     event_ = new NetEvent(fd);
     event_->setReadCallback(std::bind(&TcpConnection::handleRead, this)); //FIXME:
+    event_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this)); //FIXME:
     event_->enableReading();
     loop_->updateNetEvent(event_);
 }
@@ -142,6 +143,31 @@ void TcpConnection::send(const void* data, int nlen)
             event_->enableWriting();
             loop_->updateNetEvent(event_);
         }
+    }
+}
+
+void TcpConnection::handleWrite()
+{
+    if (event_->isWriting())
+    {
+        ssize_t nlen = write(event_->fd(), output_buffer_.peek(), output_buffer_.readableBytes());
+        if (nlen > 0)
+        {
+            output_buffer_.retrieve(nlen);
+            if (output_buffer_.readableBytes() == 0)
+            {
+                event_->disableWriting();
+                //LOG
+            }
+        }
+        else
+        {
+            //LOG
+        }
+    }
+    else
+    {
+        //LOG
     }
 }
 
