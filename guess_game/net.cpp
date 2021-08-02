@@ -157,6 +157,7 @@ void TcpConnection::handleWrite()
             if (output_buffer_.readableBytes() == 0)
             {
                 event_->disableWriting();
+                loop_->updateNetEvent(event_);
                 //LOG
             }
         }
